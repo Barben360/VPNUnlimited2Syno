@@ -44,3 +44,4 @@ If you want to restore the ovpn configuration to any of its previous version:
 - Rename the subfolder you want to restore using the name "RESTORE" (case sensitive)
 - Using the same process as "Setup" script, run "./Restore" as an administrator
 
+Thank you to *cuzzi* for the original client ovpn script.
