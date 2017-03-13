@@ -1,0 +1,183 @@
+#!/usr/bin/python3
+
+import os
+import shutil
+from datetime import datetime
+
+work_dir = os.getcwd()
+
+input_folder = os.path.join(work_dir, "ovpn_files")
+syno_folder = "/usr/syno/etc/synovpnclient/openvpn"
+
+print("#############################################",flush=True)
+print("######### VPN Unlimited to Synology #########",flush=True)
+print("#########       by Barben360        #########",flush=True)
+print("#########           V1.0            #########",flush=True)
+print("#############################################",flush=True)
+
+if os.path.exists("./temp") is True:
+	shutil.rmtree("./temp")
+	
+print("Creating backup of previous ovpn configuration...",flush=True)
+
+date_and_time = str(datetime.now()).replace("-","_").replace(" ","_").replace(":","_").replace(".","_")
+shutil.copytree(syno_folder,"./temp/syno_save")
+shutil.copytree(syno_folder,os.path.join("./syno_save",date_and_time))
+
+os.chdir("./temp")
+
+
+print("Reading previous ovpn configuration...",flush=True)
+os.makedirs("./output")
+existing_config = []
+if os.path.exists("./syno_save/ovpnclient.conf") is not True:
+	open("./output/ovpnclient.conf", "a").close()
+else:
+	with open("./syno_save/ovpnclient.conf","r") as file_in:
+		with open("./output/ovpnclient.conf","w") as file_out:
+			for line in file_in:
+				line_temp = line.strip()
+				if len(line_temp) > 0:
+					if line_temp[0] == "[":
+						val_config = line[line.find("[")+1:line.find("]")]
+						existing_config.append(val_config)
+					file_out.write(line_temp + "\n")
+
+
+
+
+print("Reading and extracting VPN Unlimited configurations...",flush=True)
+input_files_temp = os.listdir(input_folder)
+input_files = []
+for filename in input_files_temp:
+	if filename.split(".")[-1] == "ovpn":
+		input_files.append(os.path.join(input_folder,filename))
+
+list_conf = list()
+id_temp = "o1488800000"
+for filename in input_files:
+	conf_temp = dict()
+	
+	# Creating new id
+	id_exists = True
+	while id_exists is True:
+		id_temp = "o" + str(int(id_temp[1:]) + 1)
+		found_id = False
+		for id_existing in existing_config:
+			if id_existing == id_temp:
+				found_id = True
+		if found_id is False:
+			id_exists = False
+	conf_temp["id"] = id_temp
+	
+	ca_start = False
+	client_crt_start = False
+	key_start = False
+	conf_temp["remote"] = ""
+	conf_temp["ca"] = []
+	conf_temp["client_crt"] = []
+	conf_temp["key"] = []
+	with open(filename, "r") as file_in:
+		for line in file_in:
+			line_temp = line.strip()
+			
+			if ca_start is True:
+				conf_temp["ca"].append(line_temp)
+			elif client_crt_start is True:
+				conf_temp["client_crt"].append(line_temp)
+			elif key_start is True:
+				conf_temp["key"].append(line_temp)
+				
+			if len(line_temp) > 0:
+				if len(line_temp.split()) > 1 and line_temp.split()[0].find("remote") != -1:
+					conf_temp["remote"] = line_temp.split()[1]
+				elif line_temp.find("<ca>") != -1:
+					ca_start = True
+				elif ca_start is True and line_temp.find("-----END CERTIFICATE-----") != -1:
+					ca_start = False
+				elif line_temp.find("<cert>") != -1:
+					client_crt_start = True
+				elif client_crt_start is True and line_temp.find("-----END CERTIFICATE-----") != -1:
+					client_crt_start = False
+				elif line_temp.find("<key>") != -1:
+					key_start = True
+				elif key_start is True and line_temp.find("-----END PRIVATE KEY-----") != -1:
+					key_start = False
+	remote_nice = conf_temp["remote"].split(".")[0].upper()
+	remote_nice = remote_nice.replace("-","_")
+	conf_temp["remote_nice"] = remote_nice
+	available_P2P = False
+	if remote_nice.find("US_SF") != -1 or remote_nice.find("CA_TR") != -1 or remote_nice.find("RO") != -1 or remote_nice.find("LU") != -1 or remote_nice.find("FR") != -1:
+		available_P2P = True
+	
+	conf_temp["P2P"] = available_P2P
+	
+	list_conf.append(conf_temp.copy())
+
+
+print("Setting up VPN configurations... ",flush=True)
+
+# Writing ovpnclient.conf file
+with open("./output/ovpnclient.conf", "a") as file_out:
+	for conf in list_conf:
+		file_out.write("[" + conf["id"] + "]\n")
+		file_out.write("nat=no\n")
+		file_out.write("redirect-gateway=no\n")
+		file_out.write("create_via_conf=yes\n")
+		file_out.write("pass=\n")
+		file_out.write("reconnect=yes\n")
+		file_out.write("conf_name=VPNUnlimited_" + conf["remote_nice"])
+		if conf["P2P"] is True:
+			file_out.write("_P2P")
+		file_out.write("\nuser=\n")
+		file_out.write("remote=" + conf["remote"] + "\n")
+		
+#Writing configuration, certificates and key files
+for conf in list_conf:
+	with open("./output/client_" + conf["id"], "w") as file_out:
+		file_out.write("dev tun\n")
+		file_out.write("tls-client\n")
+		file_out.write("remote " + conf["remote"] + " 1194\n")
+		file_out.write("pull\n")
+		file_out.write("proto udp\n")
+		file_out.write("persist-key\n")
+		file_out.write("persist-tun\n")
+		file_out.write("cipher BF-CBC\n")
+		file_out.write("up /usr/syno/etc.defaults/synovpnclient/scripts/ovpn-up\n")
+		file_out.write("route-up /usr/syno/etc.defaults/synovpnclient/scripts/route-up\n")
+		file_out.write("comp-lzo\n")
+		file_out.write("script-security 2\n")
+		file_out.write("float\n")
+		file_out.write("reneg-sec 0\n")
+		file_out.write("explicit-exit-notify\n")
+		file_out.write("plugin /lib/openvpn/openvpn-down-root.so /usr/syno/etc.defaults/synovpnclient/scripts/ip-down\n")
+		file_out.write("ca ca_" + conf["id"] + ".crt\n")
+		file_out.write("key client_key_" + conf["id"] + ".key\n")
+		file_out.write("cert client_crt_" + conf["id"] + ".crt")
+			
+	with open("./output/ca_" + conf["id"] + ".crt", "w") as file_out:
+		for line in conf["ca"]:
+			file_out.write(line + "\n")
+	
+	with open("./output/client_crt_" + conf["id"] + ".crt", "w") as file_out:
+		for line in conf["client_crt"]:
+			file_out.write(line + "\n")
+			
+	with open("./output/client_key_" + conf["id"] + ".key", "w") as file_out:
+		for line in conf["key"]:
+			file_out.write(line + "\n")
+
+print("Copying to Synology VPN folder...",flush=True)
+for filename in os.listdir("./output"):
+	if os.path.exists(os.path.join(syno_folder,filename)) is True:
+		os.remove(os.path.join(syno_folder,filename))
+	shutil.copyfile(os.path.join("./output", filename), os.path.join(syno_folder,filename))
+
+os.chdir(work_dir)
+# Cleaning
+shutil.rmtree("./temp")
+print("Finished.",flush=True)
+print("Note: \"syno_save\" folder contains a backup of your Synology's \"openvpn\" folder tagged with date and time. Please keep it just in case.",flush=True)
+			
+
+

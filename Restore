@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+import os, shutil
+
+syno_folder = "/usr/syno/etc/synovpnclient/openvpn"
+restore_folder = "./temp/RESTORE"
+if os.path.exists("./syno_save/RESTORE") is not True:
+	print("There is no \"./syno_save/RESTORE\" folder.\nPrevious OpenVPN configuration files could not be restored.",flush=True)
+	print("Please read README file for further information.",flush=True)
+else:
+	print("Restoring previous OpenVPN configuration...",flush=True)
+	shutil.rmtree(syno_folder)
+	shutil.copytree(restore_folder,syno_folder)
+	print("Finished.",flush=True)
