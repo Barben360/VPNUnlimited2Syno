@@ -14,7 +14,7 @@ There is no risk to use the scripts as a backup is done. The worst thing that co
 In order to use your services, I would like to get OpenVPN configuration files.
 Can you send them to me ?
 Best regards,
-<yourname\>"
+\<yourname\>"
 You should receive them quickly (it took 30 minutes when I asked them for myself)
 - A Synology DiskStation with Python3 installed. It is not pre-installed so just find it in Synology Package Center.
 - Remote SSH connection parametered on your DiskStation
@@ -26,13 +26,13 @@ Note: you need to be admin on your DiskStation
 ##How to use Setup script:
 - Put the "VPNUnlimited2Syno" folder somewhere on your DiskStation (e.g. your home folder) the way you want
 - Put all the VPN Unlimited ".ovpn" files you want to install in the "./VPNUnlimited2Syno/ovpn_files" folder
-- With your SSH-ready computer, connect to your DiskStation ("ssh <username\>@<diskstation_name\>"):
+- With your SSH-ready computer, connect to your DiskStation ("ssh \<username\>@\<diskstation_name\>"):
 	- Go to "VPNUnlimited2Syno" folder
 	- Run "./Setup" as an administrator (either the script won't be able to write in ovpn configurations)
 	- The installation only takes a few microseconds. You can then exit the SSH connexion.
 - Go to your Control Panel on Synology's web interface using your usual web browser.
 - Go to "Network/Network interface".
-- You should see a new list of VPN connections "VPN - VPNUnlimited_<location\>" sometimes ending with "_P2P".
+- You should see a new list of VPN connections "VPN - VPNUnlimited_\<location\>" sometimes ending with "_P2P".
 - To connect any of these VPN connections, just right click, "connect". You are connected !
 Note: You can modify parameters performing right click, "modify". Just remember to leave "Username" and "Password" selections empty.
 
