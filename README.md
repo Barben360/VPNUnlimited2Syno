@@ -9,7 +9,7 @@ There is no risk to use the scripts as a backup is done. The worst thing that co
 ##Prerequisites:
 
 - A paid VPN Unlimited access.
-- Your original OpenVPN files. To get them, email support@keepsolid.com.
+- Your original OpenVPN files. To get them, email support@keepsolid.com.<br />
 Template:<br />
 "Hello,<br />
 In order to use your services, I would like to get OpenVPN configuration files.<br />
