@@ -9,13 +9,16 @@ There is no risk to use the scripts as a backup is done. The worst thing that co
 ##Prerequisites:
 
 - A paid VPN Unlimited access.
-- Your original OpenVPN files. To get them, email support@keepsolid.com:
+- Your original OpenVPN files. To get them, email support@keepsolid.com.
+
+Template:
 "Hello,
 In order to use your services, I would like to get OpenVPN configuration files.
 Can you send them to me ?
 Best regards,
 \<yourname\>"
 You should receive them quickly (it took 30 minutes when I asked them for myself)
+
 - A Synology DiskStation with Python3 installed. It is not pre-installed so just find it in Synology Package Center.
 - Remote SSH connection parametered on your DiskStation
 - A computer on your local network able to use SSH (for Windows, use PuTTY)
