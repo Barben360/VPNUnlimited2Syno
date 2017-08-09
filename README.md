@@ -1,6 +1,6 @@
 #VPN Unlimited to Synology by Barben360
 
-##Created 03-13-2017 - Tested on Synology DS216+ only
+##Created 03-13-2017 - Confirmed working on Synology DS412J, DS216+ and DS716+II
 
 These scripts are made to automate the installation of VPN Unlimited OpenVPN configurations on a Synology DiskStation.
 It also adds a "P2P" flag in the VPN connection names corresponding to VPN Unlimited servers allowing P2P (US-California 1, Canada-Ontario, Romania, Luxembourg and France).
