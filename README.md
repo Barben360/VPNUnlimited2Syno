@@ -1,4 +1,4 @@
-# VPN Unlimited to Synology by Barben360
+# VPN Unlimited to Synology
 
 ## Created 03-13-2017 - Confirmed working on Synology DS412J, DS216+ and DS716+II
 
