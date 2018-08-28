@@ -30,7 +30,7 @@ Note: you need to be admin on your DiskStation
 - Put all the VPN Unlimited ".ovpn" files you want to install in the "./VPNUnlimited2Syno/ovpn_files" folder
 - With your SSH-ready computer, connect to your DiskStation ("ssh \<username\>@\<diskstation_name\>"):
 	- Go to "VPNUnlimited2Syno" folder
-	- Run "./Setup" as an administrator (either the script won't be able to write in ovpn configurations)
+	- Run "./Setup" as an administrator (otherwise the script won't be able to write in ovpn configurations)
 	- The installation only takes a few microseconds. You can then exit the SSH connexion.
 - Go to your Control Panel on Synology's web interface using your usual web browser.
 - Go to "Network/Network interface".
