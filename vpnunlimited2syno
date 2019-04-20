@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+
+import argparse
+import tempfile
+import os
+import subprocess
+import shutil
+import sys
+from datetime import datetime
+
+DEBUG = 1
+
+
+def __PRINT_DBG__(str):
+    if DEBUG:
+        print('[DEBUG] {}'.format(str), flush=True)
+
+
+def __MPRINT__(str):
+    print('{}'.format(str), flush=True)
+
+
+def __PRINT_ERR_AND_EXIT_(str):
+    print('[ERROR] {}'.format(str))
+    print('Exiting', flush=True)
+    sys.exit(1)
+
+
+SYNO_OPENVPN_DIR = '/usr/syno/etc/synovpnclient/openvpn'
+
+REMOTES = ['at.vpnunlimitedapp.com',
+           'au-syd.vpnunlimitedapp.com',
+           'be.vpnunlimitedapp.com',
+           'bg.vpnunlimitedapp.com',
+           'br.vpnunlimitedapp.com',
+           'by.vpnunlimitedapp.com',
+           'ca.vpnunlimitedapp.com',
+           'ca-tr.vpnunlimitedapp.com',
+           'ca-vn.vpnunlimitedapp.com',
+           'ch.vpnunlimitedapp.com',
+           'cl.vpnunlimitedapp.com',
+           'cy.vpnunlimitedapp.com',
+           'cz.vpnunlimitedapp.com',
+           'de-dus.vpnunlimitedapp.com',
+           'de.vpnunlimitedapp.com',
+           'dk.vpnunlimitedapp.com',
+           'ee.vpnunlimitedapp.com',
+           'es.vpnunlimitedapp.com',
+           'fi.vpnunlimitedapp.com',
+           'fr.vpnunlimitedapp.com',
+           'fr-sbg.vpnunlimitedapp.com',
+           'gr.vpnunlimitedapp.com',
+           'hk.vpnunlimitedapp.com',
+           'hr.vpnunlimitedapp.com',
+           'hu.vpnunlimitedapp.com',
+           'ie-dub.vpnunlimitedapp.com',
+           'il.vpnunlimitedapp.com',
+           'im.vpnunlimitedapp.com',
+           'in-ka.vpnunlimitedapp.com',
+           'in.vpnunlimitedapp.com',
+           'is.vpnunlimitedapp.com',
+           'it-mil.vpnunlimitedapp.com',
+           'jp.vpnunlimitedapp.com',
+           'kr.vpnunlimitedapp.com',
+           'lt.vpnunlimitedapp.com',
+           'lu.vpnunlimitedapp.com',
+           'lv.vpnunlimitedapp.com',
+           'md.vpnunlimitedapp.com',
+           'mx.vpnunlimitedapp.com',
+           'mys.vpnunlimitedapp.com',
+           'nl.vpnunlimitedapp.com',
+           'no.vpnunlimitedapp.com',
+           'nz.vpnunlimitedapp.com',
+           'pl.vpnunlimitedapp.com',
+           'pt.vpnunlimitedapp.com',
+           'ro.vpnunlimitedapp.com',
+           'se.vpnunlimitedapp.com',
+           'sg.vpnunlimitedapp.com',
+           'si.vpnunlimitedapp.com',
+           'sk.vpnunlimitedapp.com',
+           'th.vpnunlimitedapp.com',
+           'tr.vpnunlimitedapp.com',
+           'uk-bbc.vpnunlimitedapp.com',
+           'uk-cv.vpnunlimitedapp.com',
+           'uk.vpnunlimitedapp.com',
+           'us-chi.vpnunlimitedapp.com',
+           'us-dal.vpnunlimitedapp.com',
+           'us-hou.vpnunlimitedapp.com',
+           'us-la.vpnunlimitedapp.com',
+           'us-lv.vpnunlimitedapp.com',
+           'us-mia.vpnunlimitedapp.com',
+           'us-netflix.vpnunlimitedapp.com',
+           'us-ny.vpnunlimitedapp.com',
+           'us.vpnunlimitedapp.com',
+           'us-sea.vpnunlimitedapp.com',
+           'us-sf.vpnunlimitedapp.com',
+           'us-slc.vpnunlimitedapp.com',
+           'us-sl.vpnunlimitedapp.com',
+           'us-stream.vpnunlimitedapp.com',
+           'vn.vpnunlimitedapp.com',
+           'za.vpnunlimitedapp.com'
+           ]
+
+P2P_REMOTES = ['ca-tr.vpnunlimitedapp.com',
+               'fr.vpnunlimitedapp.com',
+               'lu.vpnunlimitedapp.com',
+               'ro.vpnunlimitedapp.com',
+               'us-sf.vpnunlimitedapp.com']
+
+PORT = 1194
+
+CLIENT_SCRIPT = ['client',
+                 'dev tun',
+                 'pull',
+                 'persist-tun',
+                 'persist-key',
+                 'ping 5',
+                 'ping-exit 30',
+                 'nobind',
+                 'cipher AES-256-CBC',
+                 'auth SHA512',
+                 'remote-random',
+                 'remote-cert-tls server',
+                 'auth-nocache',
+                 'route-metric 1',
+                 'up /usr/syno/etc.defaults/synovpnclient/scripts/ovpn-up',
+                 'route-up /usr/syno/etc.defaults/synovpnclient/scripts/route-up',
+                 'comp-lzo no',
+                 'script-security 2',
+                 'float',
+                 'reneg-sec 0',
+                 'explicit-exit-notify',
+                 'plugin /lib/openvpn/openvpn-down-root.so /usr/syno/etc.defaults/synovpnclient/scripts/ip-down',
+                 'remote ##REMOTE##'
+                 'proto udp',
+                 'redirect-gateway',
+                 'ca ca_##ID##.crt',
+                 'key client_key_##ID##.key',
+                 'cert client_crt_##ID##.crt']
+
+
+def backup(backupPath):
+    timeStamp = str(datetime.now()).replace(
+        "-", "_").replace(" ", "_").replace(":", "_").replace(".", "_")
+    backupDirName = 'SYNO_OPENVPN_BACKUP_{}'.format(timeStamp)
+    backupDirPath = os.path.join(backupPath, backupDirName)
+
+    shutil.copytree(SYNO_OPENVPN_DIR, backupDirPath)
+    __MPRINT__('Configuration successfully backed up in {}'.format(backupDirPath))
+    return
+
+
+def restore(backupPath, backupDirName):
+    fullBackupPath = os.path.join(backupPath, backupDirName)
+    __MPRINT__('Creating a backup...'.format(fullBackupPath))
+    backup(backupPath)
+    __MPRINT__('Removing all Synology\'s OpenVPN data...')
+    if not os.path.isdir(fullBackupPath):
+        __PRINT_ERR_AND_EXIT_('Backup {} does not exist'.format(backupDirName))
+    shutil.rmtree(SYNO_OPENVPN_DIR)
+    __MPRINT__('Restoring backup {}...'.format(fullBackupPath))
+    shutil.copytree(fullBackupPath, SYNO_OPENVPN_DIR)
+    __MPRINT__('Backup restored')
+    return
+
+
+def extractCertData(srcFile):
+    caCertData = []
+    clientCertData = []
+    clientKeyData = []
+    with open(srcFile, 'r') as fileIn:
+        currentFile = ''
+        for line in fileIn:
+            if not currentFile:
+                if line.strip() == '<ca>':
+                    currentFile = 'caCert'
+                elif line.strip() == '<cert>':
+                    currentFile = 'clientCert'
+                elif line.strip() == '<key>':
+                    currentFile = 'clientKey'
+            elif currentFile == 'caCert':
+                lineStrip = line.strip()
+                if lineStrip == '</ca>':
+                    currentFile = ''
+                else:
+                    caCertData.append(lineStrip)
+            elif currentFile == 'clientCert':
+                lineStrip = line.strip()
+                if lineStrip == '</cert>':
+                    currentFile = ''
+                else:
+                    clientCertData.append(lineStrip)
+            elif currentFile == 'clientKey':
+                lineStrip = line.strip()
+                if lineStrip == '</key>':
+                    currentFile = ''
+                else:
+                    clientKeyData.append(lineStrip)
+    return caCertData, clientCertData, clientKeyData
+
+
+def createUsedIDList():
+    ovpnConfPath = os.path.join(SYNO_OPENVPN_DIR, 'ovpnclient.conf')
+    if not os.path.exists(ovpnConfPath):
+        return []
+    with open(ovpnConfPath, 'r') as fileIn:
+        for line in fileIn:
+            lineStrip = line.strip()
+            if lineStrip[0] == '[' and lineStrip[-1] == ']':
+                return lineStrip[1:-1]
+
+
+def setup(srcFile):
+    if not os.path.exists(srcFile):
+        __PRINT_ERR_AND_EXIT_(
+            'VPNUnlimited source file {} does not exist'.format(srcFile))
+    caCertData, clientCertData, clientKeyData = extractCertData(srcFile)
+    usedIDs = createUsedIDList()
+    idBase = 0
+    for remote in REMOTES:
+        idAlreadyTaken = True
+        while idAlreadyTaken:
+            id = 'o{:010}'.format(idBase)
+            if id in usedIDs:
+                idBase += 1
+            else:
+                idAlreadyTaken = False
+
+    return
+
+
+if __name__ == '__main__':
+    __MPRINT__('############################################')
+    __MPRINT__('######### VPNUnlimited to Synology #########')
+    __MPRINT__('#########       by Barben360       #########')
+    __MPRINT__('#########           v2.0           #########')
+    __MPRINT__('############################################')
