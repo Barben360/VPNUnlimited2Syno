@@ -107,7 +107,7 @@ P2P_REMOTES = ['ca-tr.vpnunlimitedapp.com',
                'ro.vpnunlimitedapp.com',
                'us-sf.vpnunlimitedapp.com']
 
-PORT = 1194
+PORT = '1194'
 
 CLIENT_SCRIPT = ['client',
                  'dev tun',
@@ -131,15 +131,28 @@ CLIENT_SCRIPT = ['client',
                  'reneg-sec 0',
                  'explicit-exit-notify',
                  'plugin /lib/openvpn/openvpn-down-root.so /usr/syno/etc.defaults/synovpnclient/scripts/ip-down',
-                 'remote ##REMOTE##'
+                 'remote #REMOTE# #PORT#',
                  'proto udp',
                  'redirect-gateway',
-                 'ca ca_##ID##.crt',
-                 'key client_key_##ID##.key',
-                 'cert client_crt_##ID##.crt']
+                 'ca ca_#ID#.crt',
+                 'key client_key_#ID#.key',
+                 'cert client_crt_#ID#.crt']
+
+CONF_SCRIPT_BASE = [
+    '[#ID#]',
+    'nat=no',
+    'redirect-gateway=yes',
+    'create_via_conf=yes',
+    'pass=',
+    'reconnect=yes',
+    'conf_name=#CONF_NAME#',
+    'user=',
+    'remote=#REMOTE#',
+    ''
+]
 
 
-def backup(backupPath):
+def backup(backupPath, clean=False):
     timeStamp = str(datetime.now()).replace(
         "-", "_").replace(" ", "_").replace(":", "_").replace(".", "_")
     backupDirName = 'SYNO_OPENVPN_BACKUP_{}'.format(timeStamp)
@@ -147,20 +160,20 @@ def backup(backupPath):
 
     shutil.copytree(SYNO_OPENVPN_DIR, backupDirPath)
     __MPRINT__('Configuration successfully backed up in {}'.format(backupDirPath))
+    if clean:
+        shutil.rmtree(SYNO_OPENVPN_DIR)
+        os.mkdir(SYNO_OPENVPN_DIR)
     return
 
 
-def restore(backupPath, backupDirName):
-    fullBackupPath = os.path.join(backupPath, backupDirName)
-    __MPRINT__('Creating a backup...'.format(fullBackupPath))
-    backup(backupPath)
-    __MPRINT__('Removing all Synology\'s OpenVPN data...')
+def restore(fullBackupPath):
     if not os.path.isdir(fullBackupPath):
-        __PRINT_ERR_AND_EXIT_('Backup {} does not exist'.format(backupDirName))
+        __PRINT_ERR_AND_EXIT_('Backup directory {} does not exist'.format(fullBackupPath))
+    __MPRINT__('Removing all Synology\'s OpenVPN data...')
     shutil.rmtree(SYNO_OPENVPN_DIR)
     __MPRINT__('Restoring backup {}...'.format(fullBackupPath))
     shutil.copytree(fullBackupPath, SYNO_OPENVPN_DIR)
-    __MPRINT__('Backup restored')
+    __MPRINT__('Backup successfully restored')
     return
 
 
@@ -201,22 +214,31 @@ def extractCertData(srcFile):
 
 def createUsedIDList():
     ovpnConfPath = os.path.join(SYNO_OPENVPN_DIR, 'ovpnclient.conf')
+    ret = []
     if not os.path.exists(ovpnConfPath):
-        return []
+        return ret
     with open(ovpnConfPath, 'r') as fileIn:
         for line in fileIn:
             lineStrip = line.strip()
-            if lineStrip[0] == '[' and lineStrip[-1] == ']':
-                return lineStrip[1:-1]
+            if len(lineStrip) > 2 and lineStrip[0] == '[' and lineStrip[-1] == ']':
+                ret.append(lineStrip[1:-1])
+    return ret
 
 
 def setup(srcFile):
+    def formatStr(strIn, id, remote, confName):
+        ret = strIn
+        ret = ret.replace('#ID#', id)
+        ret = ret.replace('#REMOTE#', remote)
+        ret = ret.replace('#CONF_NAME#', confName)
+        ret = ret.replace('#PORT#', PORT)
+        return ret
+
     if not os.path.exists(srcFile):
         __PRINT_ERR_AND_EXIT_(
             'VPNUnlimited source file {} does not exist'.format(srcFile))
-    caCertData, clientCertData, clientKeyData = extractCertData(srcFile)
     usedIDs = createUsedIDList()
-    idBase = 0
+    idBase = 1
     for remote in REMOTES:
         idAlreadyTaken = True
         while idAlreadyTaken:
@@ -225,13 +247,77 @@ def setup(srcFile):
                 idBase += 1
             else:
                 idAlreadyTaken = False
+        confName = 'VPNUnlimited_{}'.format(
+            remote.split('.')[0].upper().replace('-', '_'))
+        if remote in P2P_REMOTES:
+            confName = '{}_P2P'.format(confName)
+        __MPRINT__('Creating OpenVPN configuration for remote {}'.format(
+            remote.split('.')[0]))
+        # Writing ovpn file
+        __MPRINT__('- Creating OpenVPN file {}'.format('client_{}'.format(id)))
+        with open(os.path.join(SYNO_OPENVPN_DIR, 'client_{}'.format(id)), 'w') as fileOut:
+            for line in CLIENT_SCRIPT:
+                fileOut.write('{}\n'.format(
+                    formatStr(line, id, remote, confName)))
 
+        # Writing certificate files
+        caCertData, clientCertData, clientKeyData = extractCertData(srcFile)
+        __MPRINT__('- Creating CA certificate {}'.format('ca_{}.crt'.format(id)))
+        with open(os.path.join(SYNO_OPENVPN_DIR, 'ca_{}.crt'.format(id)), 'w') as fileOut:
+            for line in caCertData:
+                fileOut.write('{}\n'.format(line))
+        __MPRINT__(
+            '- Creating client certificate {}'.format('client_crt_{}.crt'.format(id)))
+        with open(os.path.join(SYNO_OPENVPN_DIR, 'client_crt_{}.crt'.format(id)), 'w') as fileOut:
+            for line in clientCertData:
+                fileOut.write('{}\n'.format(line))
+        __MPRINT__(
+            '- Creating client key {}'.format('client_key_{}.key'.format(id)))
+        with open(os.path.join(SYNO_OPENVPN_DIR, 'client_key_{}.key'.format(id)), 'w') as fileOut:
+            for line in clientKeyData:
+                fileOut.write('{}\n'.format(line))
+        __MPRINT__('- Adding configuration to {}'.format('ovpnclient.conf'))
+        # Writing configuration file
+        ovpnClientConfPath = os.path.join(SYNO_OPENVPN_DIR, 'ovpnclient.conf')
+        with open(ovpnClientConfPath, 'a') as fileOut:
+            for line in CONF_SCRIPT_BASE:
+                fileOut.write('{}\n'.format(
+                    formatStr(line, id, remote, confName)))
+        idBase += 1
+    __MPRINT__('VPNUnlimited OpenVPN was successfully setup')
     return
 
 
 if __name__ == '__main__':
-    __MPRINT__('############################################')
-    __MPRINT__('######### VPNUnlimited to Synology #########')
-    __MPRINT__('#########       by Barben360       #########')
-    __MPRINT__('#########           v2.0           #########')
-    __MPRINT__('############################################')
+    parser = argparse.ArgumentParser(
+        description='VPNUnlimited OpenVPN configuration for Synology DSM')
+    parserCommands = parser.add_subparsers(
+        title='commands', dest='command', help='Commands')
+
+    backupCommand = parserCommands.add_parser('backup')
+    backupCommand.add_argument(
+        'backupsPath', metavar='BACKUPS-PATH', help='Path of the directory where to put the backup ')
+    backupCommand.add_argument('--clean', dest='backupClean', action='store_true',
+                               help='Remove all Synology OpenVPN configurations')
+
+    restoreCommand = parserCommands.add_parser('restore')
+    restoreCommand.add_argument('backupPath', metavar='BACKUP-PATH',
+                                help='Path of the configuration directory to restore')
+
+    setupCommand = parserCommands.add_parser('setup')
+    setupCommand.add_argument(
+        'templateFile', metavar='OVPN-FILE', help='VPN Unlimited template OpenVPN file')
+
+    args = parser.parse_args()
+
+    if not args.command:
+        __PRINT_ERR_AND_EXIT_('No command passed. Type --help for usage')
+
+    if args.command == 'backup':
+        backup(args.backupsPath, args.backupClean)
+    elif args.command == 'restore':
+        restore(args.backupPath)
+    elif args.command == 'setup':
+        setup(args.templateFile)
+    else:
+        __PRINT_ERR_AND_EXIT_('Unknown command {}'.format(args.command))
