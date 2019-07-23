@@ -96,7 +96,7 @@ That's it! You can check that all configurations are here in *Control Panel*, *N
 
 ![syno_vpnunlimited_conf_result](assets/syno_vpnunlimited_conf_result.png)
 
-To connect to any of the server, just right-click and *Connect*.
+To connect to any server, just right-click and *Connect*.
 
 In bonus, all servers which accept P2P are appended with the suffix *_P2P*.
 
