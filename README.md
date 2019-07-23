@@ -6,17 +6,17 @@ It also provides commands to backup all your OpenVPN configurations from your Sy
 
 ## Prerequisites
 
-- You must install Python 3 package to your Synology DiskStation. You can do it from the package manager on the web interface.
+- Install Python 3 package to your Synology DiskStation. You can do it from the package manager on the web interface.
   
   ![syno_install_python3](assets/syno_install_python3.png)
 
-- You must enable SSH server on your Synology DiskStation. You can do this from the control panel in the web interface, activating *Advanced Mode* and going to *Terminal and SNMP*, ticking *Enable SSH service*. We'll suppose you keep the default port value 22.
+- Enable SSH server on your Synology DiskStation. You can do this from the control panel in the web interface, activating *Advanced Mode* and going to *Terminal and SNMP*, ticking *Enable SSH service*. We'll suppose you keep the default port value 22.
 
   ![syno_enable_ssh](assets/syno_enable_ssh.png)
 
-- You must have an SSH client on the device you are going to operate from. On Linux or Mac OS, your terminal will be enough. On Windows, you can use [Putty](https://mediatemple.net/community/products/dv/204404604/using-ssh-in-putty-).
+- Make sure you have an SSH client on the device you are going to operate from, i.e your favorite terminal on Linux or Mac OS and [Putty](https://mediatemple.net/community/products/dv/204404604/using-ssh-in-putty-) on Windows.
 
-- You must get an OpenVPN configuration file from KeepSolid, which will be used to setup the certificates and client key to authenticate to VPNUnlimited. To do this, [authenticate to KeepSolid](https://my.keepsolid.com/login/) and go to [VPN Unlimited user office](https://my.keepsolid.com/products/vpn/). Then, generate an OpenVPN configuration for a new device. Rename the downloaded file to `template.ovpn`.
+- Get an OpenVPN configuration file from KeepSolid, which will be used to setup the certificates and client key to authenticate to VPNUnlimited. To do this, [authenticate to KeepSolid](https://my.keepsolid.com/login/) and go to [VPN Unlimited user office](https://my.keepsolid.com/products/vpn/). Then, generate an OpenVPN configuration for a new device. Rename the downloaded file to `template.ovpn`.
 
   ![vpnunlimited_openvpn_conf_gen](assets/vpnunlimited_openvpn_conf_gen.png)
 
